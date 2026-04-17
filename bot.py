@@ -335,20 +335,15 @@ async def main():
     print("🤖 Bot is starting...")
     await application.initialize()
     await application.start()
+    
+    # Start polling
     await application.updater.start_polling()
     
-    print("✅ Bot is running!")
+    print("✅ Bot is running and ready!")
+    print("=" * 60)
     
-    # Keep running
-    try:
-        while True:
-            await asyncio.sleep(1)
-    except KeyboardInterrupt:
-        print("\n👋 Bot stopped")
-    finally:
-        await application.updater.stop()
-        await application.stop()
-        await application.shutdown()
+    # Keep the bot running
+    await asyncio.Event().wait()
 
 if __name__ == '__main__':
     try:
@@ -357,3 +352,4 @@ if __name__ == '__main__':
         print("\n👋 Bot stopped")
     except Exception as e:
         print(f"❌ Error: {e}")
+        exit(1)
