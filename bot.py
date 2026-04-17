@@ -18,13 +18,14 @@ load_dotenv(dotenv_path=env_path)
 # Configuration
 TOKEN = os.getenv('BOT_TOKEN')
 API_URL = "http://104.223.121.139:6969/api/gen"
-SECRET_KEY = "YOUR_SECRET_KEY"  # Replace with your actual secret key from the API
+SECRET_KEY = "IpYDCxU9VAxqi88ByaVscqTNDJPg7Cg5"  # Your actual secret key
 
 # YOUR CREDIT
 YOUR_CREDIT = "@CrackByLIM"
 
 if not TOKEN:
-    print("❌ ERROR: BOT_TOKEN not found!")
+    print("❌ ERROR: BOT_TOKEN not found in .env file!")
+    print("Please create a .env file with: BOT_TOKEN=your_bot_token_here")
     exit(1)
 
 # Enable logging
@@ -363,6 +364,25 @@ Please upload a `.txt` file.
         lines = content.split('\n')
         valid_lines = [l for l in lines if l.strip() and not l.startswith('#')]
         
+        if len(valid_lines) == 0:
+            await status_msg.edit_text(
+                f"""
+╔════════════════════════════════════════╗
+║           ❌ NO VALID LINES ❌         ║
+╚════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+No valid account lines found in the file.
+
+Please check the format and try again.
+
+⚡ **Powered by {YOUR_CREDIT}** ⚡
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                """,
+                parse_mode='Markdown'
+            )
+            return
+        
         # Update professional screen
         await status_msg.edit_text(
             f"""
@@ -413,6 +433,7 @@ Please upload a `.txt` file.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ **Valid Found:** `{valid_count}`
+❌ **Invalid:** `{invalid_count}`
 ⏳ **Current:** `{account.get('email', 'Unknown')[:30]}...`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -442,8 +463,10 @@ Please upload a `.txt` file.
                     'quality': account.get('video_quality', 'N/A'),
                     'streams': account.get('max_streams', 'N/A')
                 })
+                logger.info(f"✅ Valid account found: {email}")
             else:
                 invalid_count += 1
+                logger.info(f"❌ Invalid account: {email} - {result.get('error')}")
             
             # Small delay to avoid rate limits
             await asyncio.sleep(0.5)
@@ -516,6 +539,7 @@ Please upload a `.txt` file.
                     reply_markup=InlineKeyboardMarkup(keyboard),
                     parse_mode='Markdown'
                 )
+                await asyncio.sleep(0.3)  # Small delay between messages
             
             # Send final summary with all accounts sent
             final_summary = f"""
@@ -551,6 +575,7 @@ No valid accounts were found in your file.
 💡 **Suggestions:**
 • Get fresh Netflix cookies
 • Check file format
+• Verify your secret key is correct
 • Try again later
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -598,13 +623,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== MAIN FUNCTION ====================
 
-async def run_bot():
-    """Run the bot"""
+async def main():
+    """Start the bot"""
     print("=" * 60)
     print("🎬 PROFESSIONAL NETFLIX ACCOUNT CHECKER")
     print("=" * 60)
     print(f"✅ Bot Token: {TOKEN[:10]}...")
     print(f"✅ API URL: {API_URL}")
+    print(f"✅ Secret Key: {SECRET_KEY[:10]}...")
     print(f"✅ Credit: {YOUR_CREDIT}")
     print("=" * 60)
     print("🤖 Bot is running... Press Ctrl+C to stop")
@@ -613,43 +639,36 @@ async def run_bot():
     print("=" * 60)
     
     # Create application
-    app = Application.builder().token(TOKEN).build()
+    application = Application.builder().token(TOKEN).build()
     
     # Add handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("stats", stats_command))
-    app.add_handler(CommandHandler("clear", clear_command))
-    app.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("stats", stats_command))
+    application.add_handler(CommandHandler("clear", clear_command))
+    application.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(MessageHandler(filters.Document.FileExtension("txt"), handle_file))
     
-    # File handler
-    app.add_handler(MessageHandler(filters.Document.FileExtension("txt"), handle_file))
+    # Start the bot
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
     
-    # Initialize and start
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-    
+    # Keep running
     try:
         while True:
             await asyncio.sleep(1)
     except KeyboardInterrupt:
         print("\n👋 Bot stopped by user")
     finally:
-        await app.updater.stop()
-        await app.stop()
-        await app.shutdown()
+        await application.updater.stop()
+        await application.stop()
+        await application.shutdown()
 
-def main():
-    """Main entry point"""
+if __name__ == '__main__':
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(run_bot())
+        asyncio.run(main())
     except KeyboardInterrupt:
         print("\n👋 Bot stopped by user")
     except Exception as e:
         print(f"❌ Error: {e}")
-
-if __name__ == '__main__':
-    main()
