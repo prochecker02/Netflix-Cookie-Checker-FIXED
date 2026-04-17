@@ -17,8 +17,8 @@ load_dotenv(dotenv_path=env_path)
 
 # Configuration
 TOKEN = os.getenv('BOT_TOKEN')
-API_URL = "http://genznfapi.onrender.com"
-SECRET_KEY = "KUROSAKI1D_cP642DCEw0bxnMLHSIFlGZQjVh1RgSPM"
+API_URL = "http://104.223.121.139:6969/api/gen"
+SECRET_KEY = "YOUR_SECRET_KEY"  # Replace with your actual secret key from the API
 
 # YOUR CREDIT
 YOUR_CREDIT = "@CrackByLIM"
@@ -45,9 +45,8 @@ valid_accounts = 0
 # ==================== API FUNCTIONS ====================
 
 async def check_netflix_id(netflix_id, email):
-    """Check if Netflix ID is valid by calling the API"""
+    """Check if Netflix ID is valid by calling the new API"""
     try:
-        url = API_URL
         data = {
             "netflix_id": netflix_id,
             "secret_key": SECRET_KEY
@@ -55,17 +54,18 @@ async def check_netflix_id(netflix_id, email):
         
         logger.info(f"Checking Netflix ID for {email}")
         
-        response = requests.post(url, json=data, timeout=10)
+        response = requests.post(API_URL, json=data, timeout=10)
         
         try:
             result = response.json()
         except:
             return {
                 "success": False, 
-                "error": "Invalid JSON response",
+                "error": "Invalid JSON response from API",
                 "email": email
             }
         
+        # Check if the request was successful based on the new API response format
         if result.get('success') == True:
             return {
                 "success": True,
@@ -74,17 +74,45 @@ async def check_netflix_id(netflix_id, email):
                 "data": result
             }
         else:
+            # Handle different error codes from the new API
+            error_code = result.get('error_code', 'UNKNOWN_ERROR')
+            error_msg = result.get('error', 'Unknown error')
+            
+            # Provide more user-friendly error messages
+            if error_code == 'MISSING_NETFLIX_ID':
+                error_msg = "Netflix ID is missing"
+            elif error_code == 'MISSING_SECRET_KEY':
+                error_msg = "Secret key is missing"
+            elif error_code == 'INVALID_SECRET_KEY':
+                error_msg = "Invalid secret key - Please check your credentials"
+            elif error_code == 'INVALID_NETFLIX_ID':
+                error_msg = "Netflix ID is invalid or expired - Please get a fresh Netflix cookie"
+            elif error_code == 'MAINTENANCE_MODE':
+                error_msg = "System is under maintenance - Please try again later"
+            
             return {
                 "success": False,
-                "error": result.get('error', 'Unknown error'),
-                "error_code": result.get('error_code', 'UNKNOWN_ERROR'),
+                "error": error_msg,
+                "error_code": error_code,
                 "email": email
             }
                 
+    except requests.exceptions.Timeout:
+        return {
+            "success": False, 
+            "error": "API request timeout - Server might be slow",
+            "email": email
+        }
+    except requests.exceptions.ConnectionError:
+        return {
+            "success": False, 
+            "error": "Cannot connect to API server - Please check if the host is available",
+            "email": email
+        }
     except Exception as e:
         return {
             "success": False, 
-            "error": str(e),
+            "error": f"API Error: {str(e)}",
             "email": email
         }
 
